@@ -1,0 +1,44 @@
+---
+- name: Collecter les facts et générer un rapport par serveur
+  hosts: prod
+  # gather_facts: true par défaut -> ansible_facts est rempli avant les tâches
+
+  tasks:
+    - name: Afficher un résumé du serveur
+      ansible.builtin.debug:
+        msg: >-
+          {{ inventory_hostname }} :
+          {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }},
+          {{ ansible_facts['processor_vcpus'] }} vCPU,
+          {{ ansible_facts['memtotal_mb'] }} Mo de RAM,
+          IP privée {{ ansible_facts['default_ipv4']['address'] | default('inconnue') }}
+
+    # run_once : un seul dossier à créer, pas un par hôte
+    - name: Créer le dossier des rapports sur le poste de contrôle
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/reports"
+        state: directory
+        mode: "0755"
+      delegate_to: localhost
+      run_once: true
+
+    # Le rapport est écrit sur ton poste, avec les facts de chaque serveur
+    - name: Écrire le rapport du serveur
+      ansible.builtin.copy:
+        content: |
+          Rapport généré par Ansible
+          ==========================
+          Hôte          : {{ inventory_hostname }}
+          Groupes       : {{ group_names | join(', ') }}
+          Nom système   : {{ ansible_facts['hostname'] }}
+          OS            : {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }}
+          Noyau         : {{ ansible_facts['kernel'] }}
+          Architecture  : {{ ansible_facts['architecture'] }}
+          vCPU          : {{ ansible_facts['processor_vcpus'] }}
+          RAM totale    : {{ ansible_facts['memtotal_mb'] }} Mo
+          IP privée     : {{ ansible_facts['default_ipv4']['address'] | default('inconnue') }}
+          IP publique   : {{ ansible_host }}
+          Disques       : {{ ansible_facts['devices'].keys() | select('match', '^(nvme|xvd|sd)') | sort | join(', ') }}
+        dest: "{{ playbook_dir }}/reports/{{ inventory_hostname }}.txt"
+        mode: "0644"
+      delegate_to: localhost

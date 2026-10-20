@@ -4,5 +4,7 @@
 collections/
 # Fichiers de reprise générés après un échec
 *.retry
+# Rapports générés par facts.yml
+reports/
 # Fichiers de crash de bash.exe (Windows)
 *.stackdump

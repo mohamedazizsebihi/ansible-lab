@@ -73,7 +73,7 @@ ansible-exam/
 │   ├── web.yml              #    Serveurs web (rôle webserver)
 │   ├── db.yml               #    Base de données (rôle database)
 │   ├── storage.yml          #    Stockage LVM sur db1
-│   ├── facts.yml            #    Facts et rapports (référencé, voir note plus bas)
+│   ├── facts.yml            #    Facts et rapports (reports/<hôte>.txt)
 │   └── cron.yml             #    Tâche planifiée de health-check
 ├── destroy.yml              # 3. Détruit l'infrastructure AWS
 │
@@ -234,10 +234,8 @@ Enchaîne les playbooks dans un ordre précis (par exemple, `alice` doit exister
 | 2     | `web.yml`     | `web`     | `web`  |
 | 3     | `db.yml`      | `db`      | `db`   |
 | 4     | `storage.yml` | `storage` | `db`   |
-| 5     | `facts.yml`   | `facts`   | —      |
+| 5     | `facts.yml`   | `facts`   | `prod` |
 | 6     | `cron.yml`    | `cron`    | `web`  |
-
-> **Note :** `site.yml` importe `facts.yml`, qui n'est pas encore présent dans le dépôt. Il faut l'ajouter (ou retirer cette ligne) pour que `ansible-playbook site.yml` s'exécute.
 
 ### `users.yml` — Utilisateurs, groupes et sudo
 
@@ -282,6 +280,35 @@ Déroulement :
    - création du LV `lv_backup` en **1500 Mio**, avec **repli automatique (`rescue`) sur 800 Mio** si l'espace est insuffisant (`shrink: false` : un LV existant n'est jamais réduit) ;
    - formatage XFS (un volume déjà formaté n'est pas reformaté) ;
    - montage persistant sur `/backup` (montage immédiat + ligne dans `/etc/fstab`).
+
+### `facts.yml` — Facts et rapports
+
+Sur tous les serveurs (`prod`) :
+
+1. Collecte les facts (comportement par défaut, `gather_facts`).
+2. Affiche un résumé par serveur : OS, nombre de vCPU, RAM, IP privée.
+3. Crée le dossier `reports/` **sur le poste de contrôle** (`delegate_to: localhost`, `run_once: true`).
+4. Écrit un rapport par serveur dans `reports/<hôte>.txt` : groupes, nom système, OS, noyau, architecture, vCPU, RAM, IP privée et publique, disques.
+
+Exemple de `reports/db1.txt` :
+
+```
+Rapport généré par Ansible
+==========================
+Hôte          : db1
+Groupes       : aws_ec2, db, prod
+Nom système   : ip-172-31-x-x
+OS            : Amazon 2023
+Noyau         : 6.1.x-amzn2023.x86_64
+Architecture  : x86_64
+vCPU          : 2
+RAM totale    : 916 Mo
+IP privée     : 172.31.x.x
+IP publique   : x.x.x.x
+Disques       : nvme0n1, nvme1n1
+```
+
+Le dossier `reports/` est exclu de Git : les rapports se régénèrent avec `ansible-playbook site.yml --tags facts`.
 
 ### `cron.yml` — Tâche planifiée
 
@@ -429,6 +456,8 @@ ansible-playbook site.yml
 ```bash
 ansible-playbook destroy.yml
 ```
+
+Comme `provision.yml`, il utilise le profil AWS `isoset` (via `module_defaults`) : on détruit bien dans le même compte que celui où l'on a créé.
 
 Dans l'ordre :
 

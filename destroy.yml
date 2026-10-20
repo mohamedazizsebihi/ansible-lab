@@ -10,6 +10,8 @@
   module_defaults:
     group/amazon.aws.aws:
       region: "{{ aws_region }}"
+      # Même profil que provision.yml, sinon on viserait le profil AWS par défaut
+      profile: isoset
 
   tasks:
     # Filtre par tag : on ne touche QU'À ce qui appartient à l'examen
