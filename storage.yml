@@ -1,0 +1,74 @@
+---
+- name: Configurer le stockage LVM du serveur de base de données
+  become: true
+  hosts: db
+  vars:
+    # t3.micro (Nitro) -> /dev/nvme1n1 ; t2.micro (Xen) -> /dev/xvdf
+    data_disk: /dev/nvme1n1
+    vg_name: vg_data
+    lv_name: lv_backup
+    mount_point: /backup
+
+  tasks:
+    # basename : /dev/nvme1n1 -> nvme1n1, la clé utilisée dans ansible_facts['devices']
+    - name: Signaler l'absence du disque de données
+      become: true
+      ansible.builtin.debug:
+        msg: "Disque de donnees absent sur {{ inventory_hostname }}"
+      when: (data_disk | basename) not in ansible_facts['devices']
+
+    # Toutes les tâches de ce bloc héritent de la condition "disque présent"
+    - name: Préparer le stockage quand le disque est présent
+      become: true
+      when: (data_disk | basename) in ansible_facts['devices']
+      block:
+        - name: Installer les outils LVM
+          ansible.builtin.dnf:
+            name: lvm2
+            state: present
+
+        # Crée le PV et le VG en une seule tâche
+        - name: Créer le groupe de volumes
+          become: true
+          community.general.lvg:
+            vg: "{{ vg_name }}"
+            pvs: "{{ data_disk }}"
+
+        # Bloc imbriqué : on tente 1500 Mio ; en cas d'échec, repli sur 800 Mio
+        - name: Créer le volume logique avec repli
+          become: true
+          block:
+            - name: Créer le LV en 1500 Mio
+              community.general.lvol:
+                vg: "{{ vg_name }}"
+                lv: "{{ lv_name }}"
+                size: 1500m
+          rescue:
+            - name: Expliquer le repli
+              become: true
+              ansible.builtin.debug:
+                msg: "Espace insuffisant, creation d'un LV de 800 Mio"
+            # shrink: false -> ne JAMAIS réduire un LV existant (XFS ne se réduit pas)
+            - name: Créer le LV en 800 Mio
+              become: true
+              community.general.lvol:
+                vg: "{{ vg_name }}"
+                lv: "{{ lv_name }}"
+                size: 800m
+                shrink: false
+
+        # Ne reformate pas un volume déjà formaté (idempotent, pas de perte de données)
+        - name: Formater le volume en XFS
+          become: true
+          community.general.filesystem:
+            fstype: xfs
+            dev: "/dev/{{ vg_name }}/{{ lv_name }}"
+
+        # mounted = monte maintenant ET ajoute la ligne dans /etc/fstab
+        - name: Monter le volume de façon persistante
+          become: true
+          ansible.posix.mount:
+            path: "{{ mount_point }}"
+            src: "/dev/{{ vg_name }}/{{ lv_name }}"
+            fstype: xfs
+            state: mounted

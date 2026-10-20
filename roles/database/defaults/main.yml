@@ -1,0 +1,5 @@
+---
+db_name: examdb
+db_user: appuser
+# Socket Unix de MariaDB sur Amazon Linux 2023
+db_socket: /var/lib/mysql/mysql.sock

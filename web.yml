@@ -1,0 +1,18 @@
+---
+- name: Déployer les serveurs web
+  hosts: web
+  roles:
+    - webserver
+
+  # post_tasks : après le rôle ET après les handlers -> on teste la configuration réellement active
+  post_tasks:
+    - name: Vérifier /health depuis le poste de contrôle (via l'IP publique)
+      ansible.builtin.uri:
+        url: "http://{{ ansible_host }}/health"
+        return_content: true
+      # Exécuté sur ton poste, mais avec les variables de web1 puis de web2
+      delegate_to: localhost
+      # Pas de sudo sur ton poste
+      become: false
+      register: health
+      failed_when: "'OK' not in health.content"

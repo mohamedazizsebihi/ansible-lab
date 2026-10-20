@@ -1,0 +1,9 @@
+# Groupes remplis par aws_ec2.yml, déclarés ici pour que prod:children soit toujours valide
+[web]
+
+[db]
+
+# Groupe parent : tout l'environnement de production
+[prod:children]
+web
+db

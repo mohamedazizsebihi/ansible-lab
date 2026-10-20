@@ -1,0 +1,26 @@
+aws_region: eu-north-1
+project_tag: ansible-exam
+# t2 n'existe pas en eu-north-1 ; t3.micro est l'équivalent (Nitro, éligible free tier)
+instance_type: t3.micro
+key_name: ansible-exam
+# Clé PUBLIQUE à importer dans AWS (pas le .pem privé)
+ssh_pub_key: "{{ lookup('ansible.builtin.env', 'HOME') }}/.ssh/isoset-lab.pub"
+sg_name: exam-sg
+
+instances:
+  - name: web1
+    role: web
+  - name: web2
+    role: web
+  - name: db1
+    role: db
+
+    # Disque de données supplémentaire (tâche 9). /dev/sdf est le nom côté API AWS ;
+    # sur une instance Nitro (t3), Linux le voit comme /dev/nvme1n1
+    volumes:
+      - device_name: /dev/sdf
+        ebs:
+          volume_size: 2
+          volume_type: gp3
+          delete_on_termination: true
+          

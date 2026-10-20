@@ -1,0 +1,45 @@
+---
+# mariadb105-server : nom du paquet MariaDB 10.5 sur AL2023
+# python3-pip : PyMySQL n'est pas packagé sur AL2023, on l'installe avec pip
+- name: Installer MariaDB et pip
+  become: true
+  ansible.builtin.dnf:
+    name:
+      - mariadb105-server
+      - python3-pip
+    state: present
+
+# PyMySQL : bibliothèque Python requise par les modules community.mysql
+- name: Installer PyMySQL
+  become: true
+  ansible.builtin.pip:
+    name: PyMySQL
+    state: present
+
+- name: Démarrer MariaDB et l'activer au boot
+  become: true
+  ansible.builtin.service:
+    name: mariadb
+    state: started
+    enabled: true
+
+# Connexion en root via le socket Unix : pas de mot de passe root nécessaire
+- name: Créer la base applicative
+  become: true
+  community.mysql.mysql_db:
+    name: "{{ db_name }}"
+    state: present
+    login_unix_socket: "{{ db_socket }}"
+
+# priv "base.*:ALL" = tous les droits sur cette base uniquement (moindre privilège)
+- name: Créer l'utilisateur applicatif
+  become: true
+  community.mysql.mysql_user:
+    name: "{{ db_user }}"
+    host: localhost
+    password: "{{ db_app_password }}"
+    priv: "{{ db_name }}.*:ALL"
+    state: present
+    login_unix_socket: "{{ db_socket }}"
+  # Le mot de passe ne doit jamais apparaître dans la sortie
+  no_log: true

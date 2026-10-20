@@ -1,0 +1,61 @@
+- name: Gérer les utilisateurs, les groupes et sudo
+  hosts: prod
+  become: true
+  vars_files:
+    - vars/users.yml
+
+  tasks:
+    - name: Créer le groupe devops sur les serveurs web
+      ansible.builtin.group:
+        name: devops
+        state: present
+      when: "'web' in group_names"
+
+    - name: Créer le groupe dba sur les serveurs de base de données
+      ansible.builtin.group:
+        name: dba
+        state: present
+      when: "'db' in group_names"
+
+    # Le when est testé pour CHAQUE utilisateur : sur web, seuls les developers passent
+    - name: Créer les développeurs sur les serveurs web
+      ansible.builtin.user:
+        name: "{{ item.name }}"
+        uid: "{{ item.uid }}"
+        groups: devops
+        append: true
+        shell: /bin/bash
+        # Sel fixe -> même hash à chaque exécution -> idempotent
+        password: "{{ user_password | password_hash('sha512', 'examsalt2026') }}"
+      loop: "{{ users }}"
+      loop_control:
+        label: "{{ item.name }}"
+      when:
+        - "'web' in group_names"
+        - item.job == 'developer'
+
+    - name: Créer les DBA sur les serveurs de base de données
+      ansible.builtin.user:
+        name: "{{ item.name }}"
+        uid: "{{ item.uid }}"
+        groups: dba
+        append: true
+        shell: /bin/bash
+        password: "{{ user_password | password_hash('sha512', 'examsalt2026') }}"
+      loop: "{{ users }}"
+      loop_control:
+        label: "{{ item.name }}"
+      when:
+        - "'db' in group_names"
+        - item.job == 'dba'
+
+    # %devops = le groupe devops ; validate empêche de déposer un sudoers cassé
+    - name: Autoriser sudo sans mot de passe pour le groupe devops
+      ansible.builtin.copy:
+        content: "%devops ALL=(ALL) NOPASSWD: ALL\n"
+        dest: /etc/sudoers.d/devops
+        owner: root
+        group: root
+        mode: "0440"
+        validate: /usr/sbin/visudo -cf %s
+      when: "'web' in group_names"

@@ -1,0 +1,5 @@
+# Géré par Ansible (rôle webserver) - point de contrôle de santé
+location = /health {
+    default_type text/plain;
+    return 200 "OK\n";
+}

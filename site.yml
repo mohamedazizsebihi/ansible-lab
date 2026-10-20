@@ -1,0 +1,26 @@
+---
+# Playbook maître : l'ordre compte (alice doit exister avant sa crontab)
+# provision.yml et destroy.yml restent à part : ils agissent sur AWS, pas sur les serveurs
+- name: Utilisateurs et groupes
+  ansible.builtin.import_playbook: users.yml
+  tags: users
+
+- name: Serveurs web
+  ansible.builtin.import_playbook: web.yml
+  tags: web
+
+- name: Base de données
+  ansible.builtin.import_playbook: db.yml
+  tags: db
+
+- name: Stockage LVM
+  ansible.builtin.import_playbook: storage.yml
+  tags: storage
+
+- name: Facts et rapports
+  ansible.builtin.import_playbook: facts.yml
+  tags: facts
+
+- name: Tâches planifiées
+  ansible.builtin.import_playbook: cron.yml
+  tags: cron

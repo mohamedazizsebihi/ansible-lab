@@ -1,0 +1,27 @@
+---
+- name: Planifier le contrôle de santé
+  become: true
+  hosts: web
+
+  tasks:
+    - name: Installer cronie (absent par défaut sur AL2023)
+      become: true
+      ansible.builtin.dnf:
+        name: cronie
+        state: present
+
+    - name: Démarrer crond et l'activer au boot
+      become: true
+      ansible.builtin.service:
+        name: crond
+        state: started
+        enabled: true
+
+    # Le "name" devient le commentaire "#Ansible: health-check" qui identifie la ligne
+    - name: Planifier le health-check toutes les 5 minutes pour alice
+      become: true
+      ansible.builtin.cron:
+        name: health-check
+        user: alice
+        minute: "*/5"
+        job: "curl -s http://localhost/health >> /home/alice/health.log 2>&1"

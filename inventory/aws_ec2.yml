@@ -1,0 +1,27 @@
+---
+# Le nom du fichier DOIT se terminer par aws_ec2.yml
+plugin: amazon.aws.aws_ec2
+# Même profil que module_defaults dans provision.yml
+profile: isoset
+
+regions:
+  - eu-north-1
+
+# Filtres côté API AWS : seulement les instances de l'examen, et seulement celles qui tournent
+filters:
+  tag:Project: ansible-exam
+  instance-state-name: running
+
+# Nom d'hôte dans Ansible = valeur du tag Name (web1, web2, db1)
+hostnames:
+  - tag:Name
+
+# Variables calculées pour chaque hôte : on se connecte sur l'IP publique
+compose:
+  ansible_host: public_ip_address
+
+# Un groupe par valeur du tag Role. Préfixe et séparateur vides -> "web" et "db" (pas "_web")
+keyed_groups:
+  - key: tags.Role
+    prefix: ""
+    separator: ""

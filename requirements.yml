@@ -1,0 +1,9 @@
+collections:
+    # lvg, lvol, filesystem 
+  - name: ansible.posix
+    # mount 
+  - name: community.general
+    # Modules EC2 + plugin d'inventaire aws_ec2
+  - name: amazon.aws
+    # mysql_db, mysql_user 
+  - name: community.mysql

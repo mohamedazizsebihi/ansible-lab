@@ -1,0 +1,4 @@
+---
+web_env: production
+# Racine web du paquet nginx d'Amazon Linux 2023
+web_docroot: /usr/share/nginx/html

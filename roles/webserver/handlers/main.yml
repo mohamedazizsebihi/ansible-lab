@@ -1,0 +1,17 @@
+---
+# handlers file for webserver---
+# 1) Tester la configuration complète : si elle est invalide, le play échoue AVANT le reload
+- name: Tester la configuration nginx
+  become: true
+  ansible.builtin.command: nginx -t
+  changed_when: false
+  listen: Recharger nginx
+
+# 2) Recharger sans couper les connexions en cours
+- name: Recharger le service nginx
+  become: true
+  ansible.builtin.service:
+    name: nginx
+    state: reloaded
+  listen: Recharger nginx
+

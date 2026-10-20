@@ -1,0 +1,10 @@
+users:
+  - name: alice
+    uid: 3001
+    job: developer
+  - name: bob
+    uid: 3002
+    job: developer
+  - name: carol
+    uid: 3003
+    job: dba

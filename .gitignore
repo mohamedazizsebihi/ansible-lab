@@ -1,0 +1,8 @@
+# Mot de passe du coffre Vault
+.vault-pass
+# Collections téléchargées (se réinstallent avec requirements.yml)
+collections/
+# Fichiers de reprise générés après un échec
+*.retry
+# Fichiers de crash de bash.exe (Windows)
+*.stackdump
